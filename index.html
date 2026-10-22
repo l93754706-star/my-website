@@ -4034,7 +4034,7 @@ Object.assign(act, {
   goPage: el => go(el.dataset.id), toggleMode: () => A.setMode(A.isDark() ? 'light' : 'dark'),
   siteManage: () => {
     if (!/^https?:$/.test(location.protocol)) return toast('请在已部署的网站里使用更新入口');
-    location.assign('/manage.html');
+    location.assign('/manage');
   },
   calendarMonth: el => { app.calendarOffset = (app.calendarOffset || 0) + Number(el.dataset.id)*(app.calendarYearView?12:1); render(); },
   calendarYear: () => { app.calendarYearView=!app.calendarYearView;render(); },

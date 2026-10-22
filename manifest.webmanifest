@@ -1,0 +1,11 @@
+{
+  "id": "./",
+  "name": "留白 · 我的专属空间",
+  "short_name": "留白",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#f6f5f2"
+}

@@ -4033,8 +4033,8 @@ Object.assign(act, {
   closeSheet, back: () => { closeSheet(); if (app.section === 'chat' && app.view.chat) go('chat'); else go('home'); },
   goPage: el => go(el.dataset.id), toggleMode: () => A.setMode(A.isDark() ? 'light' : 'dark'),
   siteManage: () => {
-    if (!/^https?:$/.test(location.protocol)) return toast('请在已部署的网站里使用更新入口，管理页路径是 /manage');
-    location.assign('/manage');
+    if (!/^https?:$/.test(location.protocol)) return toast('请在已部署的网站里使用更新入口');
+    location.assign('/manage.html');
   },
   calendarMonth: el => { app.calendarOffset = (app.calendarOffset || 0) + Number(el.dataset.id)*(app.calendarYearView?12:1); render(); },
   calendarYear: () => { app.calendarYearView=!app.calendarYearView;render(); },
@@ -4183,16 +4183,17 @@ Object.assign(act, {
   deleteStickers: () => { if (!app.selectedStickers.size) return toast('先选择表情图'); confirmSheet('删除表情图', '确定删除所选表情图？历史消息将显示已删除提示。', '删除', async () => { s().stickers = s().stickers.filter(x => !app.selectedStickers.has(x.id)); app.selectedStickers.clear(); await save(); closeSheet(); render(); }); },
   editBeauty: () => sheetForm('美化代码', areaField('全局 CSS', 'css', s().style.css || '/* 全应用 */\n:root { --r: 16px; }') + areaField('气泡 CSS（最高优先级）', 'bubbleCss', s().style.bubbleCss || '.bubble { border-radius: var(--bubble-r); }') + areaField('写信 CSS', 'letterCss', s().style.letterCss || '.letter { line-height: 2; }') + field('桌面背景', 'background', '', 'file', 'accept="image/*"') + field('全局字体包', 'font', '', 'file', 'accept=".woff,.woff2,.ttf,.otf"'), '应用并保存', async fd => { for (const k of ['css', 'bubbleCss', 'letterCss']) s().style[k] = String(fd.get(k)); const bg = await A.imageFile(fd.get('background'), 1500); if (bg) s().style.desktopBackground = bg; const font = fd.get('font'); if (font?.size) { if (font.size > 4 * 1024 * 1024) throw Error('字体请小于 4 MiB'); s().style.fontData = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(font); }); } await save(); A.applyStyle(); closeSheet(); render(); }),
   resetBeauty: () => {
-    const original = s().schemes.styles.find(x => /(^|[^a-z])cs([^a-z]|$)/i.test(x.name || '')) || s().preferences.csBeautyDefault;
-    if (!original?.style) return toast('缺少原 CS 美化方案，请先导入原方案，再恢复；不会替换成黑白主题。', 8000);
-    confirmSheet('恢复 CS 默认美化', '恢复原 CS 方案的颜色、CSS、头像与气泡形状、圆角和背景？', '恢复', async () => {
-      s().style = {...A.blankState().style, ...structuredClone(original.style)};
-      Object.assign(s().preferences, structuredClone(original.appearance || {}));
-      s().preferences.shapes = structuredClone(original.shapes || original.appearance?.shapes || {});
-      if (original.theme) s().preferences.theme = original.theme;
-      document.documentElement.dataset.theme = s().preferences.theme;
+    const theme = s().preferences.theme || 'mono';
+    const names = { mono: '黑白简约', wechat: '微信', qq: 'QQ', imessage: 'iMessage' };
+    confirmSheet('恢复默认美化', `把「${names[theme] || theme}」恢复成初始样式？会清空自定义 CSS、背景、字体、入口图片与形状设置，聊天记录和角色不受影响。`, '恢复', async () => {
+      const blank = A.blankState();
+      s().style = structuredClone(blank.style);
+      for (const key of ['shapes', 'glass', 'glassTransparency', 'communityAppearance']) delete s().preferences[key];
+      s().preferences.theme = theme;
+      document.documentElement.dataset.theme = theme;
       document.documentElement.dataset.mode = s().preferences.mode === 'dark' ? 'dark' : 'light';
       await save(); A.applyStyle(); closeSheet(); render();
+      toast(`已恢复${names[theme] || theme}的默认美化`);
     }, false);
   },
   launcherSettings, editLauncher: el => editLauncher(el.dataset.id),
@@ -6595,7 +6596,11 @@ function fitBoard() {
     const outside=siblings.reduce((n,x) => n+x.getBoundingClientRect().height,0);
     const controls=[...panel.children].filter(x => !x.matches('.game-board,.flight-track'));
     const chrome=controls.reduce((n,x) => n+x.getBoundingClientRect().height+8,0)+20;
-    const size=Math.max(40,Math.min(560,conv.clientWidth-16,conv.clientHeight-outside-chrome-85));
+    // 棋盘优先按对话宽度铺满：低矮屏幕上至少保留宽度的 62%，
+    // 避免不同主题因为按钮高度差把棋盘压小。
+    const width=conv.clientWidth-16;
+    const room=conv.clientHeight-outside-chrome-24;
+    const size=Math.max(40,Math.min(560,width,Math.max(room,width*0.62)));
     panel.style.setProperty('--board-size',Math.floor(size)+'px');
   };
   resize();
